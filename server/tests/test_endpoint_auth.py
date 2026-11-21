@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from opensandbox_server.services.constants import OPEN_SANDBOX_EGRESS_AUTH_HEADER
+from opensandbox_server.services.constants import EXECD_ACCESS_TOKEN_HEADER, OPEN_SANDBOX_EGRESS_AUTH_HEADER
 from opensandbox_server.services.endpoint_auth import (
+    build_execd_access_headers,
     build_egress_auth_headers,
     generate_egress_token,
     merge_endpoint_headers,
@@ -34,6 +35,14 @@ def test_build_egress_auth_headers_uses_expected_header_name() -> None:
 
     assert build_egress_auth_headers(token) == {
         OPEN_SANDBOX_EGRESS_AUTH_HEADER: token,
+    }
+
+
+def test_build_execd_access_headers_uses_expected_header_name() -> None:
+    token = "execd-token"
+
+    assert build_execd_access_headers(token) == {
+        EXECD_ACCESS_TOKEN_HEADER: token,
     }
 
 

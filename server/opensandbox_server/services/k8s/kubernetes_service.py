@@ -63,7 +63,7 @@ from opensandbox_server.services.k8s.k8s_diagnostics import (
     K8sDiagnosticsMixin,
     K8sStartupDiagnosticsMixin,
 )
-from opensandbox_server.services.k8s.endpoint_resolver import _attach_egress_auth_headers, _attach_secure_access_headers
+from opensandbox_server.services.k8s.endpoint_resolver import _attach_egress_auth_headers, _attach_execd_access_headers, _attach_secure_access_headers
 from opensandbox_server.services.k8s.list_helpers import build_sandbox_label_selector
 from opensandbox_server.services.k8s.status_helpers import (
     _is_pool_capacity_exhausted_status,
@@ -1702,6 +1702,7 @@ class KubernetesSandboxService(
                 )
             if expires is None:
                 _attach_secure_access_headers(endpoint, workload)
+            _attach_execd_access_headers(endpoint, workload, port)
             _attach_egress_auth_headers(endpoint, workload, port)
             return endpoint
 

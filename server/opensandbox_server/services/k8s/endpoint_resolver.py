@@ -23,6 +23,7 @@ from opensandbox_server.services.constants import (
 )
 from opensandbox_server.services.endpoint_auth import (
     build_egress_auth_headers,
+    build_execd_access_headers,
     build_secure_access_headers,
     merge_endpoint_headers,
 )
@@ -68,4 +69,21 @@ def _attach_secure_access_headers(endpoint: Endpoint, workload: Any) -> None:
     endpoint.headers = merge_endpoint_headers(
         endpoint.headers,
         build_secure_access_headers(token),
+    )
+
+
+# The execd API port. Direct calls to it are guarded by EXECD_ACCESS_TOKEN
+# inside the sandbox, so the same token is published as an endpoint header.
+EXECD_PORT = 44772
+
+
+def _attach_execd_access_headers(endpoint: Endpoint, workload: Any, port: int) -> None:
+    if port != EXECD_PORT:
+        return
+    token = _get_secure_access_token(workload)
+    if not token:
+        return
+    endpoint.headers = merge_endpoint_headers(
+        endpoint.headers,
+        build_execd_access_headers(token),
     )

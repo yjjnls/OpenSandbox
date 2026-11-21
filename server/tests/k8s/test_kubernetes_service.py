@@ -27,6 +27,8 @@ from pydantic import SecretStr
 
 from opensandbox_server.services.k8s.kubernetes_service import KubernetesSandboxService
 from opensandbox_server.services.constants import (
+    EXECD_ACCESS_TOKEN_ENV,
+    EXECD_ACCESS_TOKEN_HEADER,
     OPEN_SANDBOX_EGRESS_AUTH_HEADER,
     OPEN_SANDBOX_SECURE_ACCESS_HEADER,
     SANDBOX_EGRESS_AUTH_TOKEN_METADATA_KEY,
@@ -553,6 +555,27 @@ class TestKubernetesSandboxServiceCreate:
 
         _, kwargs = k8s_service.workload_provider.create_workload.call_args
         assert kwargs["annotations"][SANDBOX_SECURE_ACCESS_TOKEN_METADATA_KEY] == "secure-token"
+        # execd enforces the same token on its own API so the pod-IP path is
+        # no longer open to peer sandboxes.
+        assert kwargs["env"][EXECD_ACCESS_TOKEN_ENV] == "secure-token"
+
+    @pytest.mark.asyncio
+    async def test_create_sandbox_without_secure_access_does_not_inject_execd_token(
+        self, k8s_service, create_sandbox_request
+    ):
+        k8s_service.workload_provider.create_workload.return_value = {
+            "name": "test-id", "uid": "uid-1"
+        }
+        k8s_service.workload_provider.get_workload.return_value = MagicMock()
+        k8s_service.workload_provider.get_status.return_value = {
+            "state": "Running", "reason": "", "message": "",
+            "last_transition_at": datetime.now(timezone.utc),
+        }
+
+        await k8s_service.create_sandbox(create_sandbox_request)
+
+        _, kwargs = k8s_service.workload_provider.create_workload.call_args
+        assert EXECD_ACCESS_TOKEN_ENV not in kwargs["env"]
 
     @pytest.mark.asyncio
     async def test_create_sandbox_rejects_secure_access_without_gateway_ingress(
@@ -827,6 +850,7 @@ class TestKubernetesSandboxServiceCreate:
         assert endpoint.headers == {
             "OpenSandbox-Ingress-To": "sbx-123-44772",
             OPEN_SANDBOX_SECURE_ACCESS_HEADER: "secure-token",
+            EXECD_ACCESS_TOKEN_HEADER: "secure-token",
         }
 
     def test_get_user_endpoint_also_merges_secure_access_header(
@@ -849,6 +873,28 @@ class TestKubernetesSandboxServiceCreate:
         assert endpoint.headers == {
             "OpenSandbox-Ingress-To": "sbx-123-8080",
             OPEN_SANDBOX_SECURE_ACCESS_HEADER: "secure-token",
+        }
+        assert EXECD_ACCESS_TOKEN_HEADER not in endpoint.headers
+
+    def test_get_execd_endpoint_merges_execd_access_token_header(self, k8s_service):
+        k8s_service.workload_provider.get_workload.return_value = {
+            "metadata": {
+                "annotations": {
+                    SANDBOX_SECURE_ACCESS_TOKEN_METADATA_KEY: "secure-token",
+                }
+            }
+        }
+        k8s_service.workload_provider.get_endpoint_info.return_value = Endpoint(
+            endpoint="gateway.example.com",
+            headers={"OpenSandbox-Ingress-To": "sbx-123-44772"},
+        )
+
+        endpoint = k8s_service.get_endpoint("sbx-123", 44772)
+
+        assert endpoint.headers == {
+            "OpenSandbox-Ingress-To": "sbx-123-44772",
+            OPEN_SANDBOX_SECURE_ACCESS_HEADER: "secure-token",
+            EXECD_ACCESS_TOKEN_HEADER: "secure-token",
         }
 
     @pytest.mark.asyncio

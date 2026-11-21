@@ -46,6 +46,12 @@ SANDBOX_ORIGIN_TEMPLATE = "template"
 SANDBOX_EGRESS_AUTH_TOKEN_METADATA_KEY = "opensandbox.io/egress-auth-token"
 OPEN_SANDBOX_SECURE_ACCESS_HEADER = "OpenSandbox-Secure-Access"
 SANDBOX_SECURE_ACCESS_TOKEN_METADATA_KEY = "opensandbox.io/secure-access-token"
+# execd's own API guard. The server injects the env var into the sandbox
+# container (execd reads it at start, both in the execd-as-init and classic
+# topologies) and publishes the same value as an endpoint header so SDK
+# clients can attach it on direct execd calls.
+EXECD_ACCESS_TOKEN_HEADER = "X-EXECD-ACCESS-TOKEN"
+EXECD_ACCESS_TOKEN_ENV = "EXECD_ACCESS_TOKEN"
 
 # Environment variable name for passing network policy to egress sidecar
 EGRESS_RULES_ENV = "OPENSANDBOX_EGRESS_RULES"
@@ -229,6 +235,8 @@ __all__ = [
     "SANDBOX_EGRESS_AUTH_TOKEN_METADATA_KEY",
     "OPEN_SANDBOX_SECURE_ACCESS_HEADER",
     "SANDBOX_SECURE_ACCESS_TOKEN_METADATA_KEY",
+    "EXECD_ACCESS_TOKEN_HEADER",
+    "EXECD_ACCESS_TOKEN_ENV",
     "EGRESS_RULES_ENV",
     "EGRESS_MODE_ENV",
     "OPENSANDBOX_EGRESS_TOKEN",
